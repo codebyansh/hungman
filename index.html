@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background: #d0f799c8;
+        }
+
+        #app {
+            max-width: 600px;
+            margin: 50px auto;
+        }
+
+        #word-display {
+            margin-top: 20px;
+            font-size: 24px;
+        }
+
+        #hangman {
+            margin-top: 20px;
+        }
+
+        #message {
+            margin-top: 10px;
+        }
+
+        #guessed-letters {
+            margin-top: 10px;
+        }
+
+        #keyboard {
+            margin-top: 20px;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+        }
+    </style>
+    <title>Hangman Game</title>
+</head>
+<body>
+    <div id="app">
+        <h1>Hangman Game</h1>
+
+        <label for="category">Select Category:</label>
+        <select id="category">
+            <option value="all">All</option>
+            <option value="animals">Animals</option>
+            <option value="fruits">Fruits</option>
+            <option value="countries">Countries</option>
+        </select>
+
+        <div id="word-display"></div>
+        <div id="hangman"></div>
+        <p id="message"></p>
+        <p id="guessed-letters"></p>
+        <div id="keyboard"></div>
+        <button onclick="resetGame()">New Game</button>
+    </div>
+
+    <script>
+        let categories = {
+            all: ["hangman", "javascript", "developer", "programming", "computer", "internet"],
+            animals: ["elephant", "giraffe", "lion", "tiger", "zebra"],
+            fruits: ["apple", "banana", "orange", "strawberry", "watermelon"],
+            countries: ["usa", "canada", "france", "japan", "brazil"]
+        };
+
+        let selectedWord;
+        let guessedWord;
+        let incorrectGuesses;
+        let maxIncorrectGuesses = 6;
+        let score = 0;
+
+        function resetGame() {
+            const selectedCategory = document.getElementById("category").value;
+            selectedWord = getRandomWord(selectedCategory);
+            guessedWord = Array(selectedWord.length).fill('_');
+            incorrectGuesses = 0;
+
+            updateWordDisplay();
+            updateHangman();
+            updateMessage('');
+            updateGuessedLetters([]);
+            createKeyboard();
+        }
+
+        function getRandomWord(category) {
+            const wordArray = categories[category] || categories.all;
+            return wordArray[Math.floor(Math.random() * wordArray.length)];
+        }
+
+        function updateWordDisplay() {
+            document.getElementById("word-display").textContent = guessedWord.join(' ');
+        }
+
+        function updateHangman() {
+    const hangmanElement = document.getElementById("hangman");
+
+    const hangmanText = [
+        'Incorrect Guesses: ' + incorrectGuesses,
+        '',
+        '  +---+',
+        `  |   ${incorrectGuesses >= 1 ? 'O' : ''}`,
+        `  |  ${incorrectGuesses >= 3 ? '/' : ''}${incorrectGuesses >= 2 ? '|' : ''}${incorrectGuesses >= 4 ? '\\' : ''}`,
+        `  |  ${incorrectGuesses >= 5 ? '/' : ''} ${incorrectGuesses >= 6 ? '\\' : ''}`,
+        '  |',
+        '======='
+    ];
+
+    hangmanElement.innerHTML = '<pre>' + hangmanText.join('\n') + '</pre>';
+}
+
+
+        function updateMessage(message) {
+            document.getElementById("message").textContent = message;
+        }
+
+        function updateGuessedLetters(usedLetters) {
+            document.getElementById("guessed-letters").textContent = `Guessed Letters: ${usedLetters.join(', ')}`;
+        }
+
+        function createKeyboard() {
+            const keyboardElement = document.getElementById("keyboard");
+            keyboardElement.innerHTML = '';
+
+            for (let letter of 'abcdefghijklmnopqrstuvwxyz') {
+                const button = document.createElement("button");
+                button.textContent = letter;
+                button.addEventListener("click", () => handleGuess(letter));
+                keyboardElement.appendChild(button);
+            }
+        }
+
+        function handleGuess(letter) {
+            const usedLettersElement = document.getElementById("guessed-letters");
+            const usedLetters = usedLettersElement.textContent
+                .replace('Guessed Letters: ', '')
+                .split(', ')
+                .filter(Boolean);
+
+            if (!usedLetters.includes(letter)) {
+                usedLetters.push(letter);
+                updateGuessedLetters(usedLetters);
+
+                if (selectedWord.includes(letter)) {
+                    for (let i = 0; i < selectedWord.length; i++) {
+                        if (selectedWord[i] === letter) {
+                            guessedWord[i] = letter;
+                        }
+                    }
+
+                    updateWordDisplay();
+
+                    if (!guessedWord.includes('_')) {
+                        updateMessage(`Congratulations! You guessed the word "${selectedWord}"!`);
+                        // Increment the score on a successful guess
+                        score++;
+                        document.getElementById("score-value").textContent = score;
+                    }
+                } else {
+                    incorrectGuesses++;
+
+                    if (incorrectGuesses >= maxIncorrectGuesses) {
+                        updateHangman();
+                        updateMessage(`Game Over! The correct word was "${selectedWord}".`);
+                    } else {
+                        updateHangman();
+                    }
+                }
+
+                // Disable the button after it's clicked
+                document.querySelector(`#keyboard button:contains('${letter}')`).setAttribute("disabled", "disabled");
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            resetGame(); // Initialize the game when the page loads
+        });
+
+        // Polyfill for :contains selector
+        // Taken from: https://stackoverflow.com/a/14954477/1460674
+        if (!HTMLElement.prototype.matches) {
+            HTMLElement.prototype.matches = HTMLElement.prototype.msMatchesSelector ||
+                                            HTMLElement.prototype.webkitMatchesSelector;
+        }
+
+        if (!HTMLElement.prototype.closest) {
+            HTMLElement.prototype.closest = function(s) {
+                var el = this;
+                do {
+                    if (el.matches(s)) return el;
+                    el = el.parentElement || el.parentNode;
+                } while (el !== null && el.nodeType === 1);
+                return null;
+            };
+        }
+
+        // Extend jQuery to support :containsExact case-insensitive
+        $.expr[':'].containsExactCI = function (a, i, m) {
+            return jQuery(a).text().toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        };
+    </script>
+</body>
+</html>
